@@ -1,0 +1,6 @@
+# @package _global_
+
+defaults:
+  - override /dset: shapenet
+
+extra_aug: 0

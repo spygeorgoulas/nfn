@@ -139,6 +139,9 @@ class SirenDataset(Dataset):
             self.idx_to_path[idx] = siren_path
             label = int(re.search(label_pattern, siren_path).group(1))
             self.idx_to_label[idx] = label
+        
+        print(f"Loaded {len(self.idx_to_path)} files.")
+        
         if split == "all":
             self.idcs = list(range(len(self.idx_to_path)))
         else:
@@ -148,6 +151,8 @@ class SirenDataset(Dataset):
                 "val": list(range(val_point, test_point)),
                 "test": list(range(test_point, len(self.idx_to_path))),
             }[split]
+
+        print(f"Using {len(self.idcs)} indices for split '{split}'.")
 
     def __getitem__(self, idx):
         data_idx = self.idcs[idx]
