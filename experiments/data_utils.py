@@ -14,6 +14,10 @@ import pandas as pd
 
 from nfn.common import state_dict_to_tensors
 
+# spygeo
+import h5py
+from collections import OrderedDict
+
 
 def cycle(loader):
     while True:
@@ -53,6 +57,38 @@ def compute_mean_std(loader, max_batches=None):
     w_stats = [w_tracker.get_mean_std() for w_tracker in w_trackers]
     b_stats = [b_tracker.get_mean_std() for b_tracker in b_trackers]
     return w_stats, b_stats
+
+# spygeo
+def load_h5_params_to_state_dict(h5_file, architecture):
+    """Load weights and biases from the params dataset in an .h5 file and return a sequentially ordered state_dict.
+    spygeo modified so it returns as nfn declares an ordered dictionary with keys in order [weight1, bias1, ..., weightL, biasL]
+    """
+    with h5py.File(h5_file, 'r') as f:
+        params = f['params'][...]  # Extract the full parameter array
+        state_dict = OrderedDict()
+        idx = 0
+
+        for i in range(len(architecture) - 1):
+            in_features, out_features = architecture[i], architecture[i + 1]
+            weight_size = in_features * out_features
+            bias_size = out_features
+
+            # Extract and reshape weights and biases
+            weight = torch.tensor(params[idx: idx + weight_size].reshape(out_features, in_features))
+            idx += weight_size
+            bias = torch.tensor(params[idx: idx + bias_size])
+            idx += bias_size
+
+            # Assign sequential keys like "weight1", "bias1", "weight2", "bias2", ...
+            state_dict[f'{i}.weight'] = weight
+            state_dict[f'{i}.bias'] = bias
+
+            #for i in range(10):
+                # Print extracted shapes for 10 times
+                # print(f"Layer {i}: Weight Shape {weight.shape}, Bias Shape {bias.shape}")
+
+    return state_dict
+# spygeo
 
 
 class ZooDataset(Dataset):
@@ -126,11 +162,16 @@ class SirenDataset(Dataset):
         split="all",
         # split point for val and test sets
         split_points: typing.Tuple[int, int] = None,
+        #spygeo
+        architecture=None,  # Add architecture parameter
+        layer_layout=None
     ):
         idx_pattern = r"net(\d+)\.pth"
         label_pattern = r"_(\d)s"
         self.idx_to_path = {}
         self.idx_to_label = {}
+        self.architecture = architecture  # spygeo
+        self.layer_layout = layer_layout  # spygeo
         # TODO: this glob pattern should actually be f"{prefix}_[0-9]s/*.pth".
         # For 1 original + 10 augs, this amounts to having 10 copies instead of 11,
         # so it probably doesn't make a big difference in final performance.
@@ -140,8 +181,10 @@ class SirenDataset(Dataset):
             label = int(re.search(label_pattern, siren_path).group(1))
             self.idx_to_label[idx] = label
         
-        print(f"Loaded {len(self.idx_to_path)} files.")
+        # print(f"Loaded {len(self.idx_to_path)} files.")
         
+        '''
+        spygeo edit
         if split == "all":
             self.idcs = list(range(len(self.idx_to_path)))
         else:
@@ -151,12 +194,43 @@ class SirenDataset(Dataset):
                 "val": list(range(val_point, test_point)),
                 "test": list(range(test_point, len(self.idx_to_path))),
             }[split]
+        '''
+        # spygeo edit
+        if split in ["train", "val", "test"]:
+            data_path = os.path.join(data_path, split) 
+            print(f"Loading pre-split dataset from: {data_path}")
+
+            # Scan all .h5 files inside the category folders (0, 1, 2, ...)
+            for class_folder in sorted(os.listdir(data_path)):
+                class_path = os.path.join(data_path, class_folder)
+                if not os.path.isdir(class_path):
+                    continue  # Skip non-folder files
+
+                class_label = int(class_folder)  # Class name is the label
+                for siren_path in glob.glob(os.path.join(class_path, "*.h5")):  # Change to .h5
+                    idx = len(self.idx_to_path)  # Unique index
+                    self.idx_to_path[idx] = siren_path
+                    self.idx_to_label[idx] = class_label
+
+            # FIX: Initialize idcs so __getitem__() works
+            self.idcs = list(self.idx_to_path.keys())
+
+            print(f"Loaded {len(self.idcs)} samples from {split} dataset.")
+
+        else:
+            raise ValueError(f"Invalid split: {split}. Expected 'train', 'val', or 'test'.")
+        # end of spygeo edit
 
         print(f"Using {len(self.idcs)} indices for split '{split}'.")
 
     def __getitem__(self, idx):
         data_idx = self.idcs[idx]
-        sd = torch.load(self.idx_to_path[data_idx])
+        #spygeo
+        h5_file_path = self.idx_to_path[data_idx]
+        #spygeo
+        architecture = self.layer_layout
+        sd = load_h5_params_to_state_dict(h5_file_path, architecture)
+        #sd = torch.load(self.idx_to_path[data_idx])
         weights, biases = state_dict_to_tensors(sd)
         return (weights, biases), self.idx_to_label[data_idx]
 

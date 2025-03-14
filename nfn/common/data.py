@@ -95,11 +95,16 @@ def state_dict_to_tensors(state_dict):
     keys = list(state_dict.keys())
     i = 0
     while i < len(keys):
+        #print(f"Processing key: {keys[i]}")  # Debugging step spygeo
         weights.append(state_dict[keys[i]][None])
         i += 1
         assert keys[i].endswith("bias")
         biases.append(state_dict[keys[i]][None])
         i += 1
+
+        # spygeo
+        # print(f"Successfully converted state_dict to tensors.")
+
     return weights, biases
 
 

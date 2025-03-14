@@ -50,11 +50,16 @@ def train_step(nfnet, opt, params, label):
 
 def main(cfg):
     prev_ckpt, wandb_id = None, None
+    wandb_id = None #spygeo
     ckpt_path = os.path.join(cfg.output_dir, "checkpoint.pt")
+    '''
+    spygeo checkpoint save space in disk
+    
     if os.path.exists(ckpt_path):
         print("Resuming from checkpoint.")
         prev_ckpt = torch.load(ckpt_path)
         wandb_id = prev_ckpt["wandb_run_id"]
+    '''
     dset_name = os.path.basename(cfg.dset.data_path)
     wandb.init(project=f"classify_{dset_name}", reinit=True, resume="must" if wandb_id else False, id=wandb_id)
     if prev_ckpt is None:
@@ -98,9 +103,11 @@ def main(cfg):
         if step % 3000 == 0 or step == cfg.max_steps - 1:
             val_acc, val_loss = evaluate(nfnet, valloader)
             wandb.log({"val/acc": val_acc, "val/loss": val_loss}, step=step)
+            '''
+            save space from checpoint spygeo
             if val_acc > best_val_acc:
                 best_val_acc = val_acc
-                torch.save(nfnet.state_dict(), os.path.join(cfg.output_dir, "best.pt"))
+                #torch.save(nfnet.state_dict(), os.path.join(cfg.output_dir, "best.pt"))
             torch.save({
                 "step": step,
                 "nfnet": nfnet.state_dict(),
@@ -109,6 +116,7 @@ def main(cfg):
                 "best_val_acc": best_val_acc,
                 "wandb_run_id": wandb.run.id,
             }, ckpt_path)
+            '''
         wts_and_bs, label = next(train_iter)
         params = WeightSpaceFeatures(*wts_and_bs).to("cuda")
         loss, pred = train_step(nfnet, opt, params, label)
@@ -123,7 +131,7 @@ def main(cfg):
             wandb.log(metrics, step=step)
     outer_pbar.close()
     # load best.pt
-    nfnet.load_state_dict(torch.load(os.path.join(cfg.output_dir, "best.pt")))
+    #nfnet.load_state_dict(torch.load(os.path.join(cfg.output_dir, "best.pt"))) spygeo save space
     testset = hydra.utils.instantiate(cfg.dset, split="test")
     print(f"Test set with {len(testset)} examples.")
     testloader = data.DataLoader(testset, batch_size=cfg.batch_size, num_workers=8)
