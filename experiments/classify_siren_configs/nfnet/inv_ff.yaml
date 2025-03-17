@@ -1,10 +1,13 @@
 defaults:
   - head_cls: mlp
   - inp_enc_cls: gaussian
+  # spygeo
+  - pos_enc_cls: sin
+  # spygeo
 
 _target_: experiments.models.InvariantNFN
 hchannels: [512, 512, 512]
-mode: HNP
+mode: NP #HNP
 feature_dropout: 0.0
 normalize: false
 lnorm: null

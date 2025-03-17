@@ -1,7 +1,7 @@
 _target_: experiments.data_utils.SirenDataset
-data_path: ${data_root_dir}/shapenet10_128x2_3000S_SPYROS
+data_path: ${data_root_dir}/siren_shapenet10_wts
 prefix: randinit_smaller
-split_points: null # [45000, 50000]
+#ssplit_points: [45000, 50000]
 
 # spygeo
 layer_layout: [3, 128, 128, 1]

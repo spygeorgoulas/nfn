@@ -153,7 +153,101 @@ class ZooDataset(Dataset):
         biases = tuple(b[idx][None] for b in self.biases)
         return (weights, biases), self.metrics.iloc[idx].test_accuracy.item()
 
+class SirenDataset(Dataset):
+    def __init__(
+        self,
+        data_path: str,
+        prefix="randinit_test",
+        split: str = "train",
+        # split point for val and test sets
+        #split_points: typing.Tuple[int, int] = None,
+        #spygeo
+        architecture=None,  # Add architecture parameter
+        layer_layout=None
+    ):
+        # spygeo edit .pth changed to .h5
+        #idx_pattern = r"net(\d+)\.pth"
+        idx_pattern = r"(\d+)\.h5"
+        #label_pattern = r"_(\d)s"
+        self.idx_to_path = {}
+        self.idx_to_label = {}
+        self.architecture = architecture  # spygeo
+        self.layer_layout = layer_layout  # spygeo
 
+        assert split in ["train", "val", "test"], "Invalid split; must be 'train', 'val', or 'test'."
+
+        self.idx_to_path = {}
+        self.idx_to_label = {}
+        self.architecture = architecture  # spygeo
+        self.layer_layout = layer_layout  # spygeo
+
+        dataset_path = os.path.join(data_path, split)
+
+        print(f"Loading {split} dataset from: {dataset_path}")
+
+        idx = 0  # Unique index for tracking files
+
+        # Iterate over label directories (0, 1, etc.)
+        for label in sorted(os.listdir(dataset_path)):  # Sort ensures consistency
+            label_path = os.path.join(dataset_path, label)
+
+            if not os.path.isdir(label_path):  # Skip if not a folder
+                continue
+
+            label = int(label)  # Convert folder name to integer label
+            # print(f"Processing label: {label} (folder: {label_path})")
+
+            for model_path in glob.glob(os.path.join(label_path, "*.h5")):
+                #print(f"  Found model: {model_path}")
+                self.idx_to_path[idx] = model_path
+                self.idx_to_label[idx] = label
+                idx += 1
+
+        # Store dataset indices
+        self.idcs = list(self.idx_to_path.keys())
+
+        print(f"Total samples in {split} dataset: {len(self.idcs)}")
+
+    def __getitem__(self, idx):
+        """
+        Returns:
+            - weights and biases from the model file.
+            - corresponding label.
+        """
+
+        # Debug: Check index validity
+        if idx >= len(self.idcs):
+            print(f" ERROR: Index {idx} out of range! Dataset size: {len(self.idcs)}")
+            raise IndexError(f"Index {idx} is out of range for dataset size {len(self.idcs)}.")
+
+        data_idx = self.idcs[idx]
+
+
+        # Debug: Check if data_idx exists in idx_to_path
+        if data_idx not in self.idx_to_path:
+            print(f" ERROR: data_idx {data_idx} not found in idx_to_path!")
+            raise KeyError(f"data_idx {data_idx} not in dataset mapping.")
+
+
+        h5_file_path = self.idx_to_path[data_idx]
+        architecture = self.layer_layout
+        sd = load_h5_params_to_state_dict(h5_file_path, architecture)
+        weights, biases = state_dict_to_tensors(sd)
+        label = self.idx_to_label[data_idx]
+
+        # Debug: Verify the retrieved model path
+        if not os.path.exists(h5_file_path):
+            print(f" ERROR: Model file missing at {h5_file_path}")
+            raise FileNotFoundError(f"Model file {h5_file_path} does not exist.")
+
+        #print(f"Loading sample {idx}: {h5_file_path} (label: {label})")
+
+        return (weights, biases), label
+
+    def __len__(self):
+        return len(self.idcs)
+
+'''
 class SirenDataset(Dataset):
     def __init__(
         self,
@@ -166,8 +260,10 @@ class SirenDataset(Dataset):
         architecture=None,  # Add architecture parameter
         layer_layout=None
     ):
-        idx_pattern = r"net(\d+)\.pth"
-        label_pattern = r"_(\d)s"
+        # spygeo edit .pth changed to .h5
+        #idx_pattern = r"net(\d+)\.pth"
+        idx_pattern = r"(\d+)\.h5"
+        #label_pattern = r"_(\d)s"
         self.idx_to_path = {}
         self.idx_to_label = {}
         self.architecture = architecture  # spygeo
@@ -175,7 +271,10 @@ class SirenDataset(Dataset):
         # TODO: this glob pattern should actually be f"{prefix}_[0-9]s/*.pth".
         # For 1 original + 10 augs, this amounts to having 10 copies instead of 11,
         # so it probably doesn't make a big difference in final performance.
-        for siren_path in glob.glob(os.path.join(data_path, f"{prefix}_*/*.pth")):
+
+        # spygeo edit .pth changed to .h5
+        #for siren_path in glob.glob(os.path.join(data_path, f"{prefix}_*/*.pth")):
+        for siren_path in glob.glob(os.path.join(data_path, f"{prefix}_*/*.h5")):
             idx = int(re.search(idx_pattern, siren_path).group(1))
             self.idx_to_path[idx] = siren_path
             label = int(re.search(label_pattern, siren_path).group(1))
@@ -183,8 +282,8 @@ class SirenDataset(Dataset):
         
         # print(f"Loaded {len(self.idx_to_path)} files.")
         
-        '''
-        spygeo edit
+        
+        #spygeo edit
         if split == "all":
             self.idcs = list(range(len(self.idx_to_path)))
         else:
@@ -194,7 +293,8 @@ class SirenDataset(Dataset):
                 "val": list(range(val_point, test_point)),
                 "test": list(range(test_point, len(self.idx_to_path))),
             }[split]
-        '''
+        
+
         # spygeo edit
         if split in ["train", "val", "test"]:
             data_path = os.path.join(data_path, split) 
@@ -207,6 +307,8 @@ class SirenDataset(Dataset):
                     continue  # Skip non-folder files
 
                 class_label = int(class_folder)  # Class name is the label
+                print(f"Processing class folder: {class_folder}, Label: {class_label}")
+
                 for siren_path in glob.glob(os.path.join(class_path, "*.h5")):  # Change to .h5
                     idx = len(self.idx_to_path)  # Unique index
                     self.idx_to_path[idx] = siren_path
@@ -220,6 +322,7 @@ class SirenDataset(Dataset):
         else:
             raise ValueError(f"Invalid split: {split}. Expected 'train', 'val', or 'test'.")
         # end of spygeo edit
+       
 
         print(f"Using {len(self.idcs)} indices for split '{split}'.")
 
@@ -236,7 +339,7 @@ class SirenDataset(Dataset):
 
     def __len__(self):
         return len(self.idcs)
-
+''' 
 
 DEF_TFM = transforms.Compose([transforms.ToTensor(), transforms.Normalize(torch.Tensor([0.5]), torch.Tensor([0.5]))])
 class SirenAndOriginalDataset(Dataset):
