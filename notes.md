@@ -1,12 +1,9 @@
 # Notes
 
-# Resources problem
-- ..
-
-## NFN Architecture
-
-- 3 equivariant NF-Layers, with 512 channels each, ReLU activations
-- Followed by invariant NF-Layers (mean pooling)
+- code
+- architecture
+    - 3 equivariant NF-Layers, with 512 channels each, ReLU activations
+    - Followed by invariant NF-Layers (mean pooling)
 - 3 inputs - 1 output
 
 ----
