@@ -1,6 +1,6 @@
 defaults:
   - nfnet: inv_ff
-  - dset: cifar
+  - dset: shapenet #cifar
   - opt: adam
   - _self_
 

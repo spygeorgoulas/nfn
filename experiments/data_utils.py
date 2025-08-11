@@ -127,8 +127,10 @@ class SirenDataset(Dataset):
         # split point for val and test sets
         split_points: typing.Tuple[int, int] = None,
     ):
-        idx_pattern = r"net(\d+)\.pth"
-        label_pattern = r"_(\d)s"
+        # spygeo
+        # idx_pattern = r"net(\d+)\.pth"
+        idx_pattern = r"(\d+)\.pth"
+        # label_pattern = r"_(\d)s"
         self.idx_to_path = {}
         self.idx_to_label = {}
         # TODO: this glob pattern should actually be f"{prefix}_[0-9]s/*.pth".
