@@ -129,18 +129,55 @@ class SirenDataset(Dataset):
     ):
         # spygeo
         # idx_pattern = r"net(\d+)\.pth"
-        idx_pattern = r"(\d+)\.pth"
+        # idx_pattern = r"(\d+)\.pth" #spygeo
         # label_pattern = r"_(\d)s"
         self.idx_to_path = {}
         self.idx_to_label = {}
+
+        # --- Folder-mode (spygeo): data_path/{train,val,test}/{label}/*.pth
+        has_folder_splits = all(os.path.isdir(os.path.join(data_path, s)) for s in ["train", "val", "test"])
+        if has_folder_splits:
+            # choose which split(s) to read
+            split_globs = {"train": ["train"], "val": ["val"], "test": ["test"], "all": ["train", "val", "test"]}[split]
+            paths = []
+            for sp in split_globs:
+                paths.extend(sorted(glob.glob(os.path.join(data_path, sp, "*", "*.pth"))))
+            # index deterministically; label is parent dir name
+            for i, p in enumerate(paths):
+                label_str = os.path.basename(os.path.dirname(p))
+                try:
+                    y = int(label_str)
+                except ValueError:
+                    continue
+                self.idx_to_path[i] = p
+                self.idx_to_label[i] = y
+            self.idcs = list(range(len(self.idx_to_path)))
+            return  # done; prefix/split_points not used in folder-mode
+        # spygeo end
+
+        idx_pattern = r"net(\d+)\.pth"
+        label_pattern = r"_(\d)s"
+
         # TODO: this glob pattern should actually be f"{prefix}_[0-9]s/*.pth".
         # For 1 original + 10 augs, this amounts to having 10 copies instead of 11,
         # so it probably doesn't make a big difference in final performance.
+        for siren_path in glob.glob(os.path.join(data_path, f"{prefix}_*/*.pth")):
+            m_idx = re.search(idx_pattern, siren_path)
+            if not m_idx:
+                continue
+            idx = int(m_idx.group(1))
+            self.idx_to_path[idx] = siren_path
+            m_lab = re.search(label_pattern, siren_path)
+            if not m_lab:
+                raise ValueError(f"Could not parse label from filename: {siren_path}")
+            self.idx_to_label[idx] = int(m_lab.group(1))
+        '''
         for siren_path in glob.glob(os.path.join(data_path, f"{prefix}_*/*.pth")):
             idx = int(re.search(idx_pattern, siren_path).group(1))
             self.idx_to_path[idx] = siren_path
             label = int(re.search(label_pattern, siren_path).group(1))
             self.idx_to_label[idx] = label
+        '''
         if split == "all":
             self.idcs = list(range(len(self.idx_to_path)))
         else:

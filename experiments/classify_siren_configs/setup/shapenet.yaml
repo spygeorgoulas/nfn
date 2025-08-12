@@ -2,6 +2,24 @@
 
 defaults:
   - override /dset: shapenet
+  # spygeo
+  - override /eval/dset: shapenet
+  - override /test/dset: shapenet
 
 extra_aug: 0
 
+
+data_root_dir: ./experiments/data
+num_classes: 10
+extra_aug: 0
+seed: 0
+compile: false
+
+# only tweak the split field for val/test
+eval:
+  dset:
+    split: val
+
+test:
+  dset:
+    split: test
