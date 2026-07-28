@@ -1,0 +1,45 @@
+nfnet:
+  head_cls:
+    _target_: experiments.models.MlpHead
+    _partial_: true
+    sigmoid: false
+    num_out: 10
+    lnorm: false
+    dropout: 0.5
+  inp_enc_cls:
+    _target_: nfn.layers.GaussianFourierFeatureTransform
+    _partial_: true
+    mapping_size: 128
+    scale: 10
+  pos_enc_cls: null
+  _target_: experiments.models.InvariantNFN
+  hchannels:
+  - 512
+  - 512
+  - 512
+  mode: NP
+  feature_dropout: 0.0
+  normalize: false
+  lnorm: null
+  append_stats: false
+dset:
+  _target_: experiments.data_utils.SirenDataset
+  data_path: ${data_root_dir}/papa_3x32_1k_swi_h5_wts
+  prefix: randinit_smaller
+  layer_layout:
+  - 3
+  - 32
+  - 32
+  - 32
+  - 1
+opt:
+  _target_: torch.optim.Adam
+  lr: 0.0001
+batch_size: 32
+warmup_steps: 10000
+max_steps: 200000
+output_dir: ${hydra:runtime.output_dir}
+data_root_dir: ./experiments/data
+extra_aug: 0
+seed: 0
+compile: false

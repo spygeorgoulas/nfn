@@ -1,0 +1,46 @@
+nfnet:
+  head_cls:
+    _target_: experiments.models.MlpHead
+    _partial_: true
+    sigmoid: false
+    num_out: 10
+    lnorm: false
+    dropout: 0.5
+  inp_enc_cls:
+    _target_: nfn.layers.GaussianFourierFeatureTransform
+    _partial_: true
+    mapping_size: 128
+    scale: 10
+  pos_enc_cls: null
+  _target_: experiments.models.InvariantNFN
+  hchannels:
+  - 512
+  - 512
+  - 512
+  mode: NP
+  feature_dropout: 0.0
+  normalize: false
+  lnorm: null
+  append_stats: false
+dset:
+  _target_: experiments.data_utils.SirenDataset
+  data_path: /home/intern/spygeorgoulas/thesis-metanets/data/shapenet10/inr/h5/deluigi_4x512_05k_swi_h5
+  prefix: randinit_smaller
+  layer_layout:
+  - 3
+  - 512
+  - 512
+  - 512
+  - 512
+  - 1
+opt:
+  _target_: torch.optim.Adam
+  lr: 0.0001
+batch_size: 4
+warmup_steps: 10000
+max_steps: 10000
+output_dir: ${hydra:runtime.output_dir}
+data_root_dir: ./experiments/data
+extra_aug: 0
+seed: 0
+compile: false
