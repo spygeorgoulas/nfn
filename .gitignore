@@ -6,4 +6,5 @@ build/
 experiments/data
 #outputs/
 wandb/
-notes.md
+#Notes
+nfn/notes.md
