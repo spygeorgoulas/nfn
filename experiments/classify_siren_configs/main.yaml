@@ -4,9 +4,9 @@ defaults:
   - opt: adam
   - _self_
 
-batch_size: 32
+batch_size: 2
 warmup_steps: 10000
-max_steps: 200000
+max_steps: 10000
 output_dir: ${hydra:runtime.output_dir}
 data_root_dir: ./experiments/data
 extra_aug: 0

@@ -1,8 +1,8 @@
 _target_: experiments.data_utils.SirenDataset
 # data_path: ${data_root_dir}/nfn_1x128_1k
-data_path: ${data_root_dir}/siren_shapenet10_wts
+data_path: /home/intern/spygeorgoulas/thesis-metanets/data/shapenet10/inr/h5/deluigi_4x512_05k_swi_h5
 prefix: randinit_smaller
 #ssplit_points: [45000, 50000]
 
 # spygeo
-layer_layout: [3, 128, 1]
+layer_layout: [3, 512, 512, 512, 512, 1]
